@@ -3,6 +3,8 @@ package com.in28minutes.springboot.myfirstwebapp.todo;
 import jakarta.validation.Valid;
 import org.eclipse.tags.shaded.org.apache.xpath.operations.Mod;
 import org.springframework.cglib.core.Local;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
@@ -27,14 +29,22 @@ public class TodoController {
 
     @RequestMapping("list-todos")
     public String listAllTodos(ModelMap model){
-        List<Todo> todos = todoService.findByUsername("in28minutes");
+        String username = getLoggedInUsername();
+        List<Todo> todos = todoService.findByUsername(username);
         model.addAttribute("todos", todos);
         return "listTodos";
     }
 
+    private static String getLoggedInUsername() {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        return authentication.getName();
+    }
+
     @RequestMapping(value = "add-todo", method = RequestMethod.GET)
     public String showNewTodoPage(ModelMap model){
-        Todo todo = new Todo(0, (String) model.get("name"), "Default Description",
+        Todo todo = new Todo(0, getLoggedInUsername(), "Default Description",
                 LocalDate.now().plusYears(1), false);
         model.put("todo", todo);
         return "todo";
@@ -46,7 +56,7 @@ public class TodoController {
             return "todo";
         }
 
-        todoService.addTodo((String) model.get("name"), todo.getDescription(), todo.getTargetDate(), false);
+        todoService.addTodo(getLoggedInUsername(), todo.getDescription(), todo.getTargetDate(), false);
         return "redirect:list-todos";
     }
 
@@ -68,7 +78,7 @@ public class TodoController {
         if (result.hasErrors()){
             return "todo";
         }
-        String username = (String) model.get("name");
+        String username = getLoggedInUsername();
         todoService.updateTodo(todo);
         todo.setName(username);
         return "redirect:list-todos";
